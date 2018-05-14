@@ -1,0 +1,62 @@
+#Summary
+#1 splitting data into training and testing set
+#2 exploratory analysis
+#3 Preprocessign
+#4 Fitting model
+#5 model accuracy and out of sample error with cross validation
+#6 prediction
+
+#1 splitting data into training and testing set
+dat<-read.csv("D:/pml-training.csv",header=TRUE)
+library(caret)
+
+
+inTrain<-createDataPartition(dat$classe,p=0.70, list=FALSE)
+training<-dat[inTrain,]
+testing<-dat[-inTrain,]
+
+#2 exploratory analysis
+dim(training)
+histogram(training$classe)
+
+#3 Preprocessing
+#imputing missing values
+dat2<-preProcess(training,method="knnImpute")
+dat3<-predict(dat2,training)
+#Removing irrelevant and empty columns
+dat4<-dat3[,-c(139,136,133,130,129,128,127,126,125,101,98,95,92,91,90,89,88,87,74,73,72,71,70,69,26,23,20,17,16,15,14,13,12,11,1,5)]
+dim(dat4)
+summary(dat4)
+#pre processing with pca as there are many numeric vectors and to reduce colinearity
+prep<-preProcess(dat4,method="pca",thresh=.95)
+dat5<-predict(prep,dat4)
+#37 variable seems reasonnable
+#4 Fitting model
+#as class is a  factor, random forrest is a good model.
+Mod<-train(classe~.,data=dat5,method="rf",prox=TRUE,ntree=100)
+
+#5 model accuracy and out of sample error with cross validation
+Mod
+Mod$finalModel
+testing2<-preProcess(training,method="knnImpute")
+testing3<-predict(testing2,testing)
+testing4<-testing3[,-c(139,136,133,130,129,128,127,126,125,101,98,95,92,91,90,89,88,87,74,73,72,71,70,69,26,23,20,17,16,15,14,13,12,11,1,5)]
+testing5<-(predict(prep,testing4))
+pred<-predict(Mod,newdata=testing5)
+
+cm<-confusionMatrix(pred,testing5$classe)
+cm
+#accuracy is good and out-of sample error is low. Therefore the model seems good
+
+#6 predicting
+datTest<-read.csv("D:/pml-testing.csv",header=TRUE)
+
+dim(datTest)
+u2<-preProcess(training,method="knnImpute")
+u3<-predict(u2,datTest)
+u4<-u3[,-c(139,136,133,130,129,128,127,126,125,101,98,95,92,91,90,89,88,87,74,73,72,71,70,69,26,23,20,17,16,15,14,13,12,11,1,5)]
+u5<-(predict(prep,u4))
+
+pred2<-predict(Mod,newdata=u5)
+
+pred2
